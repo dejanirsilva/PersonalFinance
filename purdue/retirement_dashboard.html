@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Purdue Faculty Retirement Simulator</title>
+  <style>
+    :root {
+      --bg: #f7f6f2;
+      --ink: #10212b;
+      --muted: #516773;
+      --panel: #ffffff;
+      --accent-a: #e59f2f;
+      --accent-b: #146c7e;
+      --accent-c: #5b7f31;
+      --line: #dce4e9;
+      --warn: #9c4218;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", "Trebuchet MS", sans-serif;
+      background:
+        radial-gradient(1200px 600px at 100% -10%, #ffe8c4 0%, transparent 65%),
+        radial-gradient(1000px 600px at -10% 110%, #d7eef2 0%, transparent 60%),
+        var(--bg);
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 22px 18px 28px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.45rem, 2vw, 2.1rem);
+      letter-spacing: 0.01em;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 8px 22px rgba(10, 27, 35, 0.06);
+    }
+
+    .controls {
+      padding: 14px;
+    }
+
+    .controls h2, .viz h2 {
+      margin: 4px 0 12px;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .rows {
+      display: grid;
+      gap: 8px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid #c9d4dc;
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 0.9rem;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 9px;
+      padding: 8px 11px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      background: linear-gradient(110deg, var(--accent-b), #2288a1);
+    }
+
+    button.secondary {
+      background: linear-gradient(110deg, #7a8f99, #5f7280);
+    }
+
+    .help {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .viz {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fcfdfd;
+    }
+
+    .kpi .k {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .kpi .v {
+      margin-top: 6px;
+      font-size: 1.12rem;
+      font-weight: 800;
+    }
+
+    .chart-wrap {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 350px;
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: #f9fbfc;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .note {
+      color: var(--warn);
+      font-size: 0.82rem;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .mini h3 {
+      margin: 2px 0 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .small {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: 1fr; }
+      canvas { height: 320px; }
+      .split { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Purdue Faculty Retirement Simulator</h1>
+    <p class="sub">Interactive balance projection for PSRS-style saving (employer + mandatory + voluntary).</p>
+
+    <div class="grid">
+      <section class="panel controls">
+        <h2>Inputs</h2>
+        <div class="rows">
+          <div class="row"><label for="age">Current age</label><input id="age" type="number" value="40" /></div>
+          <div class="row"><label for="retAge">Retirement age</label><input id="retAge" type="number" value="67" /></div>
+          <div class="row"><label for="salary">Current salary ($)</label><input id="salary" type="number" value="300000" /></div>
+          <div class="row"><label for="balance">Current retirement balance ($)</label><input id="balance" type="number" value="400000" /></div>
+          <div class="row"><label for="salaryGrowth">Salary growth (%)</label><input id="salaryGrowth" type="number" step="0.1" value="3" /></div>
+          <div class="row"><label for="expectedReturn">Expected return (%)</label><input id="expectedReturn" type="number" step="0.1" value="6.5" /></div>
+          <div class="row"><label for="volatility">Return volatility (%)</label><input id="volatility" type="number" step="0.1" value="15" /></div>
+          <div class="row"><label for="inflation">Inflation (%)</label><input id="inflation" type="number" step="0.1" value="2.5" /></div>
+          <div class="row"><label for="employer">Employer base contribution (%)</label><input id="employer" type="number" step="0.1" value="10" /></div>
+          <div class="row"><label for="mandatory">Mandatory 401(a) (%)</label><input id="mandatory" type="number" step="0.1" value="4" /></div>
+          <div class="row"><label for="volCurrent">Your current voluntary total (%)</label><input id="volCurrent" type="number" step="0.1" value="4" /></div>
+          <div class="row"><label for="volTarget">Target voluntary total (%)</label><input id="volTarget" type="number" step="0.1" value="6" /></div>
+          <div class="row"><label for="goal">Target retirement balance ($)</label><input id="goal" type="number" value="2500000" /></div>
+          <div class="row"><label for="withdrawalRate">Withdrawal rate at retirement (%)</label><input id="withdrawalRate" type="number" step="0.1" value="4" /></div>
+          <div class="row"><label for="retYears">Years in retirement</label><input id="retYears" type="number" value="30" /></div>
+          <div class="row">
+            <label for="retModel">Retirement return model</label>
+            <select id="retModel">
+              <option value="historical">Historical sequence (Damodaran real S&amp;P)</option>
+              <option value="annual_block">Annual stationary block bootstrap (Damodaran)</option>
+              <option value="parametric">Parametric Monte Carlo</option>
+            </select>
+          </div>
+          <div class="row"><label for="histStart">Damodaran start year</label><input id="histStart" type="number" value="1945" /></div>
+          <div class="row"><label for="histEnd">Damodaran end year</label><input id="histEnd" type="number" value="2024" /></div>
+          <div class="row"><label for="blockMeanYears">Avg block length (years)</label><input id="blockMeanYears" type="number" step="1" value="6" /></div>
+          <div class="row"><label for="retStock">Retirement portfolio: stocks (%)</label><input id="retStock" type="number" step="1" value="60" /></div>
+          <div class="row"><label for="retBond">Retirement portfolio: bonds (%)</label><input id="retBond" type="number" step="1" value="30" /></div>
+          <div class="row"><label for="sims">Monte Carlo paths</label><input id="sims" type="number" value="3000" /></div>
+        </div>
+        <div class="buttons">
+          <button id="runBtn">Run Simulation</button>
+          <button class="secondary" id="resetBtn">Reset Defaults</button>
+        </div>
+        <p class="help">
+          Tips: set current/target voluntary to reflect your own plan (for example current 2% pre-tax + 2% Roth = 4% total voluntary).
+        </p>
+      </section>
+
+      <section class="panel viz">
+        <h2>Projected Balance Path</h2>
+        <div class="kpis">
+          <div class="kpi"><div class="k">Current Plan Median at Retirement</div><div class="v" id="kpiCurrent">$0</div></div>
+          <div class="kpi"><div class="k">Target Plan Median at Retirement</div><div class="v" id="kpiTarget">$0</div></div>
+          <div class="kpi"><div class="k">Median Difference (Target - Current)</div><div class="v" id="kpiDiff">$0</div></div>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="chart" width="920" height="360"></canvas>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Total Save Rate</th>
+              <th>Deterministic</th>
+              <th>MC P10</th>
+              <th>MC P50</th>
+              <th>MC P90</th>
+              <th>4% Rule (P50)</th>
+            </tr>
+          </thead>
+          <tbody id="resultRows"></tbody>
+        </table>
+
+        <div class="split">
+          <div class="mini">
+            <h3>Goal Probability</h3>
+            <table>
+              <thead>
+                <tr><th>Scenario</th><th>Target</th><th>Prob. Reach Target</th></tr>
+              </thead>
+              <tbody id="goalRows"></tbody>
+            </table>
+          </div>
+          <div class="mini">
+            <h3>Retirement Phase (Decumulation)</h3>
+            <table>
+              <thead>
+                <tr><th>Scenario</th><th>Not Depleted</th><th>Median End Balance</th></tr>
+              </thead>
+              <tbody id="retireRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="split">
+          <div class="mini">
+            <h3>Yearly Contribution Breakdown (Target Scenario)</h3>
+            <div class="small" id="contribSummary">-</div>
+          </div>
+        </div>
+        <div class="note" id="note"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="./damodaran_sp500_real.js"></script>
+  <script>
+    const ids = [
+      "age", "retAge", "salary", "balance", "salaryGrowth", "expectedReturn", "volatility",
+      "inflation", "employer", "mandatory", "volCurrent", "volTarget", "goal",
+      "withdrawalRate", "retYears", "retModel", "histStart", "histEnd", "blockMeanYears",
+      "retStock", "retBond", "sims"
+    ];
+    const defaults = {
+      age: 40, retAge: 67, salary: 300000, balance: 400000, salaryGrowth: 3, expectedReturn: 6.5,
+      volatility: 15, inflation: 2.5, employer: 10, mandatory: 4, volCurrent: 4, volTarget: 6,
+      goal: 2500000, withdrawalRate: 4, retYears: 30, retModel: "historical", histStart: 1945, histEnd: 2024,
+      blockMeanYears: 6, retStock: 60, retBond: 30,
+      sims: 3000
+    };
+
+    const chart = document.getElementById("chart");
+    const ctx = chart.getContext("2d");
+
+    function getInputs() {
+      const p = {};
+      for (const id of ids) {
+        const raw = document.getElementById(id).value;
+        p[id] = (id === "retModel") ? raw : Number(raw);
+      }
+      return p;
+    }
+
+    function setDefaults() {
+      for (const [k, v] of Object.entries(defaults)) {
+        document.getElementById(k).value = v;
+      }
+    }
+
+    function money(x) {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(x);
+    }
+
+    function percentile(sorted, p) {
+      const idx = (sorted.length - 1) * p / 100;
+      const lo = Math.floor(idx);
+      const hi = Math.ceil(idx);
+      if (lo === hi) return sorted[lo];
+      const w = idx - lo;
+      return sorted[lo] * (1 - w) + sorted[hi] * w;
+    }
+
+    function detPath(params, voluntaryRate) {
+      const years = params.retAge - params.age;
+      const out = [params.balance];
+      let salary = params.salary;
+      let bal = params.balance;
+      const total = (params.employer + params.mandatory + voluntaryRate) / 100;
+      const r = params.expectedReturn / 100;
+      const g = params.salaryGrowth / 100;
+      for (let i = 0; i < years; i++) {
+        bal *= (1 + r);
+        bal += salary * total;
+        out.push(bal);
+        salary *= (1 + g);
+      }
+      return out;
+    }
+
+    function detFullPath(params, voluntaryRate) {
+      const accumYears = params.retAge - params.age;
+      const retireYears = Math.max(0, params.retYears | 0);
+      const out = [params.balance];
+      let salary = params.salary;
+      let bal = params.balance;
+      const total = (params.employer + params.mandatory + voluntaryRate) / 100;
+      const r = params.expectedReturn / 100;
+      const g = params.salaryGrowth / 100;
+      const inf = params.inflation / 100;
+
+      for (let i = 0; i < accumYears; i++) {
+        bal *= (1 + r);
+        bal += salary * total;
+        out.push(bal);
+        salary *= (1 + g);
+      }
+
+      let withdrawal = bal * (params.withdrawalRate / 100);
+      for (let i = 0; i < retireYears; i++) {
+        bal *= (1 + r);
+        bal -= withdrawal;
+        if (bal < 0) bal = 0;
+        out.push(bal);
+        withdrawal *= (1 + inf);
+      }
+
+      return out;
+    }
+
+    function detContribBreakdown(params, voluntaryRate) {
+      const years = params.retAge - params.age;
+      let salary = params.salary;
+      let emp = 0;
+      let mandatory = 0;
+      let voluntary = 0;
+      for (let i = 0; i < years; i++) {
+        emp += salary * (params.employer / 100);
+        mandatory += salary * (params.mandatory / 100);
+        voluntary += salary * (voluntaryRate / 100);
+        salary *= (1 + params.salaryGrowth / 100);
+      }
+      return { emp, mandatory, voluntary, total: emp + mandatory + voluntary };
+    }
+
+    function randomNormal() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function retirementWeights(params) {
+      const stock = Math.max(0, params.retStock);
+      const bond = Math.max(0, params.retBond);
+      const bill = Math.max(0, 100 - stock - bond);
+      const sum = stock + bond + bill;
+      return {
+        stock: stock / sum,
+        bond: bond / sum,
+        bill: bill / sum,
+        billPct: bill
+      };
+    }
+
+    function buildHistoricalCohorts(params) {
+      const start = Math.min(params.histStart, params.histEnd);
+      const end = Math.max(params.histStart, params.histEnd);
+      const retireYears = Math.max(0, params.retYears | 0);
+      const rows = (typeof DAMODARAN_SP500_REAL !== "undefined" ? DAMODARAN_SP500_REAL : [])
+        .filter(r =>
+          r.Year >= start && r.Year <= end &&
+          Number.isFinite(r.sp500_real) &&
+          Number.isFinite(r.tbond_real) &&
+          Number.isFinite(r.tbill_real)
+        )
+        .map(r => ({
+          year: r.Year,
+          sp500_real: r.sp500_real,
+          tbond_real: r.tbond_real,
+          tbill_real: r.tbill_real
+        }))
+        .sort((a, b) => a.year - b.year);
+
+      if (retireYears <= 0 || rows.length < retireYears) {
+        return [];
+      }
+
+      const cohorts = [];
+      for (let i = 0; i <= rows.length - retireYears; i++) {
+        const slice = rows.slice(i, i + retireYears);
+        cohorts.push({
+          startYear: slice[0].year,
+          endYear: slice[slice.length - 1].year,
+          realReturns: slice.map(r => [r.sp500_real, r.tbond_real, r.tbill_real])
+        });
+      }
+      return cohorts;
+    }
+
+    function retirementFromCohorts(startBalance, params, cohorts) {
+      const w = retirementWeights(params);
+      const inf = params.inflation / 100;
+      const yearly = Array.from({ length: Math.max(0, params.retYears | 0) + 1 }, () => []);
+      const ends = [];
+      let success = 0;
+
+      for (const c of cohorts) {
+        let bal = startBalance;
+        let withdraw = startBalance * (params.withdrawalRate / 100);
+        yearly[0].push(bal);
+        for (let y = 0; y < c.realReturns.length; y++) {
+          const rr = c.realReturns[y];
+          const realRet = rr[0] * w.stock + rr[1] * w.bond + rr[2] * w.bill;
+          const nominalRet = (1 + realRet) * (1 + inf) - 1;
+          bal *= (1 + nominalRet);
+          bal -= withdraw;
+          if (bal < 0) bal = 0;
+          yearly[y + 1].push(bal);
+          withdraw *= (1 + inf);
+        }
+        ends.push(bal);
+        if (bal > 0) success += 1;
+      }
+
+      ends.sort((a, b) => a - b);
+      const p50Path = yearly.map(arr => {
+        arr.sort((a, b) => a - b);
+        return percentile(arr, 50);
+      });
+
+      return {
+        count: cohorts.length,
+        successProb: success / cohorts.length,
+        p50End: percentile(ends, 50),
+        p50Path
+      };
+    }
+
+    function annualStationaryBlockPath(annualRows, horizonYears, meanBlockYears) {
+      const n = annualRows.length;
+      const out = [];
+      if (n === 0 || horizonYears <= 0) return out;
+      const mean = Math.max(1, Math.round(meanBlockYears));
+      const p = 1 / mean;
+
+      function geometricLen() {
+        let len = 1;
+        while (Math.random() > p) len += 1;
+        return len;
+      }
+
+      while (out.length < horizonYears) {
+        const start = Math.floor(Math.random() * n);
+        const blockLen = geometricLen();
+        for (let k = 0; k < blockLen && out.length < horizonYears; k++) {
+          const idx = (start + k) % n;
+          out.push(annualRows[idx]);
+        }
+      }
+      return out;
+    }
+
+    function mcStats(params, voluntaryRate) {
+      const years = params.retAge - params.age;
+      const retireYears = Math.max(0, params.retYears | 0);
+      const sims = Math.max(500, params.sims | 0);
+      const total = (params.employer + params.mandatory + voluntaryRate) / 100;
+      const g = params.salaryGrowth / 100;
+      const mu = params.expectedReturn / 100;
+      const sigma = params.volatility / 100;
+      const goal = params.goal;
+
+      const finals = [];
+      const yearly = Array.from({ length: years + 1 }, () => []);
+      let hitCount = 0;
+      let retirementSuccessProb = 0;
+      let retireP50End = 0;
+      let cohortCount = 0;
+      let retireP50Path = Array.from({ length: retireYears + 1 }, () => 0);
+
+      for (let s = 0; s < sims; s++) {
+        let salary = params.salary;
+        let bal = params.balance;
+        yearly[0].push(bal);
+        for (let y = 1; y <= years; y++) {
+          const ret = Math.max(-0.95, mu + sigma * randomNormal());
+          bal *= (1 + ret);
+          bal += salary * total;
+          salary *= (1 + g);
+          yearly[y].push(bal);
+        }
+        finals.push(bal);
+        if (bal >= goal) hitCount += 1;
+      }
+
+      finals.sort((a, b) => a - b);
+      const p10 = percentile(finals, 10);
+      const p50 = percentile(finals, 50);
+      const p90 = percentile(finals, 90);
+
+      const p50Path = yearly.map(arr => {
+        arr.sort((a, b) => a - b);
+        return percentile(arr, 50);
+      });
+
+      if (retireYears > 0) {
+        if (params.retModel === "historical") {
+          const cohorts = buildHistoricalCohorts(params);
+          cohortCount = cohorts.length;
+          if (cohorts.length > 0) {
+            const hist = retirementFromCohorts(p50, params, cohorts);
+            retirementSuccessProb = hist.successProb;
+            retireP50End = hist.p50End;
+            retireP50Path = hist.p50Path;
+          }
+        } else if (params.retModel === "annual_block") {
+          const start = Math.min(params.histStart, params.histEnd);
+          const end = Math.max(params.histStart, params.histEnd);
+          const annualRows = (typeof DAMODARAN_SP500_REAL !== "undefined" ? DAMODARAN_SP500_REAL : [])
+            .filter(r =>
+              r.Year >= start && r.Year <= end &&
+              Number.isFinite(r.sp500_real) &&
+              Number.isFinite(r.tbond_real) &&
+              Number.isFinite(r.tbill_real)
+            )
+            .sort((a, b) => a.Year - b.Year);
+          cohortCount = annualRows.length;
+          if (annualRows.length > 0) {
+            const retirementFinals = [];
+            const retirementYearly = Array.from({ length: retireYears + 1 }, () => []);
+            let retirementSuccessCount = 0;
+            const inf = params.inflation / 100;
+            const w = retirementWeights(params);
+            for (let s = 0; s < sims; s++) {
+              let bal = finals[s];
+              retirementYearly[0].push(bal);
+              let withdraw = bal * (params.withdrawalRate / 100);
+              const path = annualStationaryBlockPath(annualRows, retireYears, params.blockMeanYears);
+              for (let ry = 1; ry <= retireYears; ry++) {
+                const pr = path[ry - 1];
+                const realRet = pr.sp500_real * w.stock + pr.tbond_real * w.bond + pr.tbill_real * w.bill;
+                const nominalRet = (1 + realRet) * (1 + inf) - 1;
+                bal *= (1 + nominalRet);
+                bal -= withdraw;
+                if (bal < 0) bal = 0;
+                retirementYearly[ry].push(bal);
+                withdraw *= (1 + inf);
+              }
+              retirementFinals.push(bal);
+              if (bal > 0) retirementSuccessCount += 1;
+            }
+            retirementFinals.sort((a, b) => a - b);
+            retireP50End = percentile(retirementFinals, 50);
+            retirementSuccessProb = retirementSuccessCount / sims;
+            retireP50Path = retirementYearly.map(arr => {
+              arr.sort((a, b) => a - b);
+              return percentile(arr, 50);
+            });
+          }
+        } else {
+          const retirementFinals = [];
+          const retirementYearly = Array.from({ length: retireYears + 1 }, () => []);
+          let retirementSuccessCount = 0;
+          for (let s = 0; s < sims; s++) {
+            let bal = finals[s];
+            retirementYearly[0].push(bal);
+            let withdraw = bal * (params.withdrawalRate / 100);
+            const inf = params.inflation / 100;
+            for (let ry = 1; ry <= retireYears; ry++) {
+              const rr = Math.max(-0.95, mu + sigma * randomNormal());
+              bal *= (1 + rr);
+              bal -= withdraw;
+              if (bal < 0) bal = 0;
+              retirementYearly[ry].push(bal);
+              withdraw *= (1 + inf);
+            }
+            retirementFinals.push(bal);
+            if (bal > 0) retirementSuccessCount += 1;
+          }
+          retirementFinals.sort((a, b) => a - b);
+          retireP50End = percentile(retirementFinals, 50);
+          retirementSuccessProb = retirementSuccessCount / sims;
+          retireP50Path = retirementYearly.map(arr => {
+            arr.sort((a, b) => a - b);
+            return percentile(arr, 50);
+          });
+        }
+      }
+
+      const p50FullPath = p50Path.concat(retireP50Path.slice(1));
+
+      return {
+        p10, p50, p90, p50Path, goalProb: hitCount / sims,
+        retirementSuccessProb,
+        retireP50End,
+        p50FullPath,
+        cohortCount
+      };
+    }
+
+    function toRealDollars(nominalValue, years, inflationPct) {
+      const inf = inflationPct / 100;
+      return nominalValue / Math.pow(1 + inf, years);
+    }
+
+    function drawChart(params, currDet, targDet, currP50, targP50) {
+      const dpr = window.devicePixelRatio || 1;
+      const w = chart.clientWidth;
+      const h = chart.clientHeight;
+      chart.width = Math.floor(w * dpr);
+      chart.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      ctx.clearRect(0, 0, w, h);
+      const pad = { l: 56, r: 18, t: 20, b: 36 };
+      const pw = w - pad.l - pad.r;
+      const ph = h - pad.t - pad.b;
+      const accumYears = params.retAge - params.age;
+      const retireYears = Math.max(0, params.retYears | 0);
+      const years = accumYears + retireYears;
+
+      const maxY = Math.max(...currDet, ...targDet, ...currP50, ...targP50) * 1.08;
+      const minY = 0;
+
+      const x = i => pad.l + (i / years) * pw;
+      const y = v => pad.t + (1 - (v - minY) / (maxY - minY)) * ph;
+
+      if (retireYears > 0) {
+        const xr = x(accumYears);
+        ctx.fillStyle = "rgba(229, 159, 47, 0.13)";
+        ctx.fillRect(xr, pad.t, (w - pad.r) - xr, ph);
+      }
+
+      ctx.strokeStyle = "#dce4e9";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 5; i++) {
+        const yy = pad.t + (i / 5) * ph;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, yy);
+        ctx.lineTo(w - pad.r, yy);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#4d6672";
+      ctx.font = '12px "Avenir Next", "Segoe UI", sans-serif';
+      for (let i = 0; i <= 5; i++) {
+        const val = maxY * (1 - i / 5);
+        ctx.fillText(money(val), 8, pad.t + (i / 5) * ph + 4);
+      }
+      ctx.fillText(String(params.age), pad.l - 6, h - 12);
+      ctx.fillText(String(params.retAge), x(accumYears) - 14, h - 12);
+      if (retireYears > 0) ctx.fillText(String(params.retAge + retireYears), w - pad.r - 30, h - 12);
+
+      if (retireYears > 0) {
+        const xr = x(accumYears);
+        ctx.strokeStyle = "#b87913";
+        ctx.lineWidth = 1.3;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(xr, pad.t);
+        ctx.lineTo(xr, h - pad.b);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      line(currDet, "#7f8f97", 2, [5, 4]);
+      line(targDet, "#4f6d2a", 2, [5, 4]);
+      line(currP50, "#1a7387", 2.6, []);
+      line(targP50, "#df8d18", 2.6, []);
+
+      function line(arr, color, width, dash) {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.setLineDash(dash);
+        arr.forEach((v, i) => {
+          if (i === 0) ctx.moveTo(x(i), y(v));
+          else ctx.lineTo(x(i), y(v));
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      const lx = pad.l + 10;
+      const ly = pad.t + 10;
+      legend(lx, ly, "#1a7387", "Current MC median");
+      legend(lx, ly + 18, "#df8d18", "Target MC median");
+      legend(lx, ly + 36, "#7f8f97", "Current deterministic");
+      legend(lx, ly + 54, "#4f6d2a", "Target deterministic");
+      if (retireYears > 0) legend(lx, ly + 72, "#b87913", "Retirement phase");
+
+      function legend(xx, yy, color, text) {
+        ctx.fillStyle = color;
+        ctx.fillRect(xx, yy - 8, 16, 3);
+        ctx.fillStyle = "#38525f";
+        ctx.fillText(text, xx + 22, yy - 3);
+      }
+    }
+
+    function run() {
+      const p = getInputs();
+      const note = document.getElementById("note");
+      note.textContent = "";
+      const rw = retirementWeights(p);
+
+      if (p.retAge <= p.age) {
+        note.textContent = "Retirement age must be greater than current age.";
+        return;
+      }
+      if (p.sims < 500) {
+        note.textContent = "Monte Carlo paths set to minimum 500 for stability.";
+      }
+      if (p.retStock + p.retBond > 100) {
+        note.textContent = (note.textContent ? note.textContent + " " : "") +
+          "Retirement stock + bond exceeds 100%, so bills are set to 0% and stock/bond are normalized.";
+      }
+
+      const scenarios = [
+        { name: "Current", vol: p.volCurrent },
+        { name: "Target", vol: p.volTarget }
+      ];
+
+      const rows = document.getElementById("resultRows");
+      rows.innerHTML = "";
+      const goalRows = document.getElementById("goalRows");
+      goalRows.innerHTML = "";
+      const retireRows = document.getElementById("retireRows");
+      retireRows.innerHTML = "";
+
+      let currentMedian = 0;
+      let targetMedian = 0;
+      let currDetFull = [];
+      let targDetFull = [];
+      let currP50Full = [];
+      let targP50Full = [];
+      let cohortCountSeen = 0;
+
+      const years = p.retAge - p.age;
+
+      for (const s of scenarios) {
+        const deterministicPath = detPath(p, s.vol);
+        const deterministicFullPath = detFullPath(p, s.vol);
+        const mc = mcStats(p, s.vol);
+        cohortCountSeen = Math.max(cohortCountSeen, mc.cohortCount || 0);
+        const totalRate = (p.employer + p.mandatory + s.vol) / 100;
+        const detFinal = deterministicPath[deterministicPath.length - 1];
+        const detReal = toRealDollars(detFinal, years, p.inflation);
+        const p50Real = toRealDollars(mc.p50, years, p.inflation);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${s.name} (${s.vol.toFixed(1)}% voluntary)</td>
+          <td>${(totalRate * 100).toFixed(1)}%</td>
+          <td>${money(detFinal)}<br><span class="small">${money(detReal)} real</span></td>
+          <td>${money(mc.p10)}</td>
+          <td>${money(mc.p50)}<br><span class="small">${money(p50Real)} real</span></td>
+          <td>${money(mc.p90)}</td>
+          <td>${money(mc.p50 * 0.04)}/yr</td>
+        `;
+        rows.appendChild(tr);
+
+        const gr = document.createElement("tr");
+        gr.innerHTML = `
+          <td>${s.name}</td>
+          <td>${money(p.goal)}</td>
+          <td>${(mc.goalProb * 100).toFixed(1)}%</td>
+        `;
+        goalRows.appendChild(gr);
+
+        const rr = document.createElement("tr");
+        rr.innerHTML = `
+          <td>${s.name}</td>
+          <td>${(mc.retirementSuccessProb * 100).toFixed(1)}%</td>
+          <td>${money(mc.retireP50End)}</td>
+        `;
+        retireRows.appendChild(rr);
+
+        if (s.name === "Current") {
+          currentMedian = mc.p50;
+          currDetFull = deterministicFullPath;
+          currP50Full = mc.p50FullPath;
+        } else {
+          targetMedian = mc.p50;
+          targDetFull = deterministicFullPath;
+          targP50Full = mc.p50FullPath;
+        }
+      }
+
+      document.getElementById("kpiCurrent").textContent = money(currentMedian);
+      document.getElementById("kpiTarget").textContent = money(targetMedian);
+      document.getElementById("kpiDiff").textContent = money(targetMedian - currentMedian);
+
+      const c = detContribBreakdown(p, p.volTarget);
+      document.getElementById("contribSummary").innerHTML =
+        `Total projected contributions to retirement accounts by age ${p.retAge}: ` +
+        `<strong>${money(c.total)}</strong><br>` +
+        `Purdue employer: ${money(c.emp)} | Mandatory 401(a): ${money(c.mandatory)} | Voluntary: ${money(c.voluntary)}`;
+
+      if (p.retModel === "historical") {
+        if (cohortCountSeen > 0) {
+          note.textContent = `Retirement phase uses ${cohortCountSeen} historical rolling cohorts from Damodaran (${Math.min(p.histStart, p.histEnd)}-${Math.max(p.histStart, p.histEnd)}), with retirement mix S/B/Bill = ${(rw.stock*100).toFixed(1)}%/${(rw.bond*100).toFixed(1)}%/${(rw.bill*100).toFixed(1)}% and real returns converted to nominal using your inflation assumption.`;
+        } else if (p.retYears > 0) {
+          note.textContent = "No valid historical cohorts available: widen Damodaran start/end years or shorten retirement years.";
+        }
+      } else if (p.retModel === "annual_block") {
+        if (cohortCountSeen > 0) {
+          note.textContent = `Retirement phase uses annual stationary block bootstrap on Damodaran real returns (${Math.min(p.histStart, p.histEnd)}-${Math.max(p.histStart, p.histEnd)}), retirement mix S/B/Bill = ${(rw.stock*100).toFixed(1)}%/${(rw.bond*100).toFixed(1)}%/${(rw.bill*100).toFixed(1)}%, average block length ${Math.max(1, Math.round(p.blockMeanYears))} years, and ${Math.max(500, p.sims | 0)} simulations.`;
+        } else {
+          note.textContent = "No historical annual return data in selected Damodaran year range.";
+        }
+      }
+
+      drawChart(p, currDetFull, targDetFull, currP50Full, targP50Full);
+    }
+
+    document.getElementById("runBtn").addEventListener("click", run);
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      setDefaults();
+      run();
+    });
+    window.addEventListener("resize", run);
+
+    setDefaults();
+    run();
+  </script>
+</body>
+</html>
